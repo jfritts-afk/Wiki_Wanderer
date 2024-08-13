@@ -52,23 +52,34 @@ def fetch_wikipedia_data():
         return None
 
 # Define directory paths
-wikipedia_dir = 'wikipedia_data'
-old_files_dir = 'old_files'
-os.makedirs(wikipedia_dir, exist_ok=True)
-os.makedirs(old_files_dir, exist_ok=True)
+most_recent_dir = 'most_recent_fetch'
+old_fetch_dir = 'old_fetch_data'
+os.makedirs(most_recent_dir, exist_ok=True)
+os.makedirs(old_fetch_dir, exist_ok=True)
 
 # Generate filename for Wikipedia data
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 wikipedia_filename = f"wikipedia_data_{timestamp}.yaml"
-wikipedia_file_path = os.path.join(wikipedia_dir, wikipedia_filename)
+wikipedia_file_path = os.path.join(most_recent_dir, wikipedia_filename)
 
-# Function to check file age and move it if necessary
-def handle_old_files(file_path, old_files_dir):
-    file_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(file_path))
-    if file_age > timedelta(minutes=1):
-        new_path = os.path.join(old_files_dir, os.path.basename(file_path))
-        shutil.move(file_path, new_path)
-        print(f"Moved old file to {new_path}")
+# Function to move old files
+def move_old_files():
+    now = datetime.now()
+    print(f"Current time: {now}")
+    print(f"Files in '{most_recent_dir}': {os.listdir(most_recent_dir)}")
+    for file in os.listdir(most_recent_dir):
+        file_path = os.path.join(most_recent_dir, file)
+        if os.path.isfile(file_path) and file.endswith('.yaml'):
+            file_time = datetime.fromtimestamp(os.path.getmtime(file_path))
+            print(f"Checking file: {file_path}, last modified: {file_time}")
+            if (now - file_time).total_seconds() > 15:  # 15 seconds old
+                try:
+                    print(f"Moving file: {file_path} to {old_fetch_dir}")
+                    shutil.move(file_path, old_fetch_dir)
+                except Exception as e:
+                    print(f"Error moving file {file_path}: {e}")
+            else:
+                print(f"File is not old enough to move: {file_path}")
 
 # Fetch Wikipedia data
 wikipedia_data = fetch_wikipedia_data()
@@ -79,7 +90,7 @@ if wikipedia_data:
         yaml.dump(wikipedia_data, file, default_flow_style=False)
     print(f"Wikipedia data saved to {wikipedia_file_path}")
 
-    # Check if file needs to be moved to old files directory
-    handle_old_files(wikipedia_file_path, old_files_dir)
+    # Move old files to old files directory
+    move_old_files()
 else:
     print("Failed to fetch Wikipedia data.")
